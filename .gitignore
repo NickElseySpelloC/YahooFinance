@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+build/
+dist/
+wheels/
+.venv/
+venv/
+*.py[oc]
+*.whl
+*.egg
+*.egg-info
+*.tar.gz
+*.tar.bz2
+*.zip
+.DS_Store
+
+# App 
+YahooFinanceConfig.yaml
+YahooFinance.code-workspace
+yahoo_prices.csv
+YahooFinance.log
