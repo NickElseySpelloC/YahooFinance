@@ -17,7 +17,7 @@ This app is a simply wrapper around the yfinance libraries. It makes it easy to 
 ## Prerequisites
 * Python 3.x installed:
 macOS: `brew install python3`
-Windows: `inget install python3 --source winget --scope machine`
+Windows: `winget install python3 --source winget --scope machine`
 * UV for Python installed:
 macOS: 'brew install uvicorn'
 Windows: ``pip install uv`
@@ -83,11 +83,13 @@ Email:
 | SubjectPrefix | Optional. If set, the app will add this text to the start of any email subject line for emails it sends. |
 
 # Running the Script
-Execute the Python script using:
+Run the app using the relavant shell script for your operating system:
 
+## macOS / Linux
 `YahooFinance.sh`
 
-The script will download the price data and write or append to the CSV file.
+## Windows 
+`powershell -ExecutionPolicy ByPass -c  .\YahooFinance.ps1`
 
 # Troubleshooting
 ## "No module named xxx"
