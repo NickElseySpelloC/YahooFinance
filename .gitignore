@@ -13,6 +13,7 @@ venv/
 *.tar.bz2
 *.zip
 .DS_Store
+.gitignore
 
 # App 
 YahooFinanceConfig.yaml
