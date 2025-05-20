@@ -1,9 +1,7 @@
 # Yahoo Finance Downloaded
 This app is a simply wrapper around the yfinance libraries. It makes it easy to download selected Yahoo symbols for a selected time period and append the price information to a CSV file that you can use with your portfolio manager. 
 
-
-**Note**: This utility has only been tested on macOS so far. The app _should_ work on Windows, but may need some tweaks. 
-
+Please also see the companion [InvestSmartExport](https://github.com/NickElseySpelloC/InvestSmartExport) app that can be used to download Aussie wholesale fund prices.
 
 # Features
 * Specify multiple symbols to be downloaded at one time
@@ -20,7 +18,7 @@ macOS: `brew install python3`
 Windows: `winget install python3 --source winget --scope machine`
 * UV for Python installed:
 macOS: 'brew install uvicorn'
-Windows: ``pip install uv`
+Windows: `pip install uv`
 
 The shell script used to run the app (*YahooFinance.sh*) is uses the *uv sync* command to ensure that all the prerequitie Python packages are installed in the virtual environment.
 
@@ -48,7 +46,7 @@ Email:
     SMTPServer: smtp.gmail.com
     SMTPPort: 587
     SMTPUsername: john.doe@gmail.com
-    SMTPPassword: averystrongpassword!
+    SMTPPassword: <Your SMTP password>
     SubjectPrefix: "[Yahoo Finance Downloader] "
 ```
 

@@ -5,6 +5,7 @@ dist/
 wheels/
 .venv/
 venv/
+.vscode/
 *.py[oc]
 *.whl
 *.egg
