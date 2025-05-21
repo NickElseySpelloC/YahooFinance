@@ -1,16 +1,13 @@
-'''
-Uses the yfinance library to fetch and display the historical stock prices of the specified stocks and write the data to a CSV file.
-
-
-'''
-import sys
+"""Uses the yfinance library to fetch and display the historical stock prices of the specified stocks and write the data to a CSV file."""
 import csv
-from datetime import datetime
+import sys
+from pathlib import Path
+
 import pandas as pd
 import yfinance as yf
 import yfinance.shared as yfshared
-from utility import ConfigManager, UtilityFunctions
 
+from utility import ConfigManager, UtilityFunctions
 
 # Create an instance of ConfigManager
 system_config = ConfigManager()
@@ -18,10 +15,10 @@ system_config = ConfigManager()
 # Create an instance of the PowerControllerState
 utility_funcs = UtilityFunctions(system_config)
 
-def get_yf_errors(log_errors=True):
+def get_yf_errors(log_errors=True):  # noqa: FBT002
     """Get the errors from yfinance shared module. Returns a list of error dict objects."""
     # Extract errors from yfshared._ERRORS.items()
-    yf_error_list = yfshared._ERRORS.items()
+    yf_error_list = yfshared._ERRORS.items()  # noqa: SLF001
 
     if yf_error_list is None:
         return None
@@ -31,7 +28,7 @@ def get_yf_errors(log_errors=True):
     for symbol, error in yf_error_list:
         error_item = {
             "Symbol": symbol,
-            "Error": error
+            "Error": error,
         }
         error_list.append(error_item)
 
@@ -41,12 +38,11 @@ def get_yf_errors(log_errors=True):
 
     return error_list
 
-def get_stock_data(symbols):
+def get_stock_data(symbols):  # noqa: PLR0911
     """Fetch historical stock data for the given symbols using yfinance. Returns a DataFrame and error list."""
-
     # Define parameters
-    yf_period = utility_funcs.config['Yahoo']['Period']
-    yf_interval = utility_funcs.config['Yahoo']['Interval']
+    yf_period = utility_funcs.config["Yahoo"]["Period"]
+    yf_interval = utility_funcs.config["Yahoo"]["Interval"]
 
     utility_funcs.log_message(f"Fetching data for symbols: {symbols}", "debug")
     # Fetch data from Yahoo Finance
@@ -56,9 +52,9 @@ def get_stock_data(symbols):
             tickers=symbols,
             period=yf_period,
             interval=yf_interval,
-            group_by='ticker',
+            group_by="ticker",
             auto_adjust=True,
-            threads=True
+            threads=True,
         )
 
         # Check if the data is empty
@@ -82,7 +78,7 @@ def get_stock_data(symbols):
         # Validate columns for each symbol
         for symbol in symbols:
             if symbol in data.columns.get_level_values(0):
-                required_columns = {'Open', 'High', 'Low', 'Close', 'Volume'}
+                required_columns = {"Open", "High", "Low", "Close", "Volume"}
                 if not required_columns.issubset(data[symbol].columns):
                     utility_funcs.report_fatal_error(f"Missing expected columns for symbol {symbol}. Data might be incomplete.")
                     get_yf_errors()
@@ -97,32 +93,32 @@ def get_stock_data(symbols):
 
         # Look for any global errors
         # Look at the error_list list and see if any of the Error values start with 'YFRateLimitError'
-        if any(error['Error'].startswith('YFRateLimitError') for error in error_list):
+        if any(error["Error"].startswith("YFRateLimitError") for error in error_list):
             utility_funcs.report_fatal_error("Yahoo Finance rate limit error. Please try again later.")
             return None, 0
 
-        if any(error['Error'].contains('Invalid input - interval') for error in error_list):
+        if any(error["Error"].contains("Invalid input - interval") for error in error_list):
             utility_funcs.report_fatal_error(f"Yahoo Finance API called with invalid interval: {yf_interval}.")
             return None, 0
 
-        if any(error['Error'].contains('YFInvalidPeriodError') for error in error_list):
+        if any(error["Error"].contains("YFInvalidPeriodError") for error in error_list):
             utility_funcs.report_fatal_error(f"Yahoo Finance API called with invalid period: {yf_period}.")
             return None, 0
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         utility_funcs.report_fatal_error(f"Exception caught when fetching data from Yahoo Finance: {e}", exit_program=True)
 
     return data, error_list
 
 def extract_stock_data(data, symbols, error_list):
-    """Extract stock data from the downloaded data and format it into a list of dictionaries.
-    
+    """
+    Extract stock data from the downloaded data and format it into a list of dictionaries.
+
     :param data: DataFrame containing the downloaded stock data.
     :param symbols: List of stock symbols to extract data for.
     :param error_list: List of errors encountered during the download process.
     :return: List of dictionaries containing the extracted stock data and error count.
     """
-
     utility_funcs.log_message(f"Extracting stock data for symbols: {symbols}", "debug")
 
     # Output list of dicts
@@ -132,50 +128,49 @@ def extract_stock_data(data, symbols, error_list):
     # Extract data per symbol and row
     for symbol in symbols:
         # Check if the symbol is in the error list
-        if any(error['Symbol'] == symbol for error in error_list):
+        if any(error["Symbol"] == symbol for error in error_list):
             utility_funcs.log_message(f"Skipping symbol {symbol} due to previous error reported during download", "debug")
             continue
 
         if symbol not in data.columns.get_level_values(0):
             continue
 
-        df = data[symbol].reset_index()  # Reset index to get 'Date' as column
+        symbol_data_frame = data[symbol].reset_index()  # Reset index to get 'Date' as column
 
         try:    # Try and extract the data
-            for _, row in df.iterrows():
+            for _, row in symbol_data_frame.iterrows():
                 record = {
-                    'Date': row['Date'].strftime('%Y-%m-%d'),
-                    'Symbol': symbol,
-                    'Open': float(row['Open']) if not pd.isna(row['Open']) else 0.0,
-                    'High': float(row['High']) if not pd.isna(row['High']) else 0.0,
-                    'Low': float(row['Low']) if not pd.isna(row['Low']) else 0.0,
-                    'Close': float(row['Close']) if not pd.isna(row['Close']) else 0.0,
-                    'Volume': int(row['Volume']) if not pd.isna(row['Volume']) else 0.0,
+                    "Date": row["Date"].strftime("%Y-%m-%d"),
+                    "Symbol": symbol,
+                    "Open": float(row["Open"]) if not pd.isna(row["Open"]) else 0.0,
+                    "High": float(row["High"]) if not pd.isna(row["High"]) else 0.0,
+                    "Low": float(row["Low"]) if not pd.isna(row["Low"]) else 0.0,
+                    "Close": float(row["Close"]) if not pd.isna(row["Close"]) else 0.0,
+                    "Volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0.0,
                 }
                 # Append each record to the stock_records list
-                if record['Open'] != 0.0 or record['High'] != 0.0 or record['Low'] != 0.0 or record['Close'] != 0.0 or record['Volume'] != 0:
+                if record["Open"] != 0.0 or record["High"] != 0.0 or record["Low"] != 0.0 or record["Close"] != 0.0 or record["Volume"] != 0:
                     stock_records.append(record)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             utility_funcs.log_message(f"Exception reported when extracting data for symbol {symbol}: {e}", "error")
             error_count += 1
             continue
 
     # Sort the stock_records by ascending date then symbol
-    stock_records.sort(key=lambda x: (x['Date'], x['Symbol']))
+    stock_records.sort(key=lambda x: (x["Date"], x["Symbol"]))
 
     return stock_records, error_count
 
 def save_to_csv(stock_data):
     """Save the extracted fund stock_data to a CSV file."""
-
-    csv_file_name = utility_funcs.config['Files']['OutputCSV']
+    csv_file_name = utility_funcs.config["Files"]["OutputCSV"]
     file_path = utility_funcs.config_manager.select_file_location(csv_file_name)
 
     # Write the data to a CSV file
-    header = ['Date', 'Symbol', 'Open', 'High', 'Low', 'Close', 'Volume']
+    header = ["Date", "Symbol", "Open", "High", "Low", "Close", "Volume"]
 
-    with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
+    with Path(file_path).open("w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
 
         # Write header
@@ -190,7 +185,7 @@ def save_to_csv(stock_data):
 def main_module():
     """Main function to run the script."""
     try:
-        yf_symbols = utility_funcs.config['Yahoo']['Symbols']
+        yf_symbols = utility_funcs.config["Yahoo"]["Symbols"]
 
         # Download the stock data using yfinance
         yf_data, yf_errors = get_stock_data(yf_symbols)
@@ -232,7 +227,7 @@ def main_module():
                 sys.exit(1)
 
     # Catch any unexpected exceptions
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         utility_funcs.report_fatal_error(f"An unexpected error occurred while writing: {e}")
         sys.exit(1)
 
