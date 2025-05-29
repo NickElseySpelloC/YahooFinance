@@ -1,5 +1,6 @@
 """Uses the yfinance library to fetch and display the historical stock prices of the specified stocks and write the data to a CSV file."""
 import csv
+import json
 import sys
 from pathlib import Path
 
@@ -38,7 +39,7 @@ def get_yf_errors(log_errors=True):  # noqa: FBT002
 
     return error_list
 
-def get_stock_data(symbols):  # noqa: PLR0911
+def get_stock_data(symbols):
     """Fetch historical stock data for the given symbols using yfinance. Returns a DataFrame and error list."""
     # Define parameters
     yf_period = utility_funcs.config["Yahoo"]["Period"]
@@ -127,6 +128,10 @@ def extract_stock_data(data, symbols, error_list):
 
     # Extract data per symbol and row
     for symbol in symbols:
+        symbol_name = None
+        symbol_divisor = 1
+        symbol_currency = None
+
         # Check if the symbol is in the error list
         if any(error["Symbol"] == symbol for error in error_list):
             utility_funcs.log_message(f"Skipping symbol {symbol} due to previous error reported during download", "debug")
@@ -135,24 +140,44 @@ def extract_stock_data(data, symbols, error_list):
         if symbol not in data.columns.get_level_values(0):
             continue
 
+        # Call yfinance.Ticker.get_info() andextract the following attributes from the info:
+        # displayName or failing that longName
+        # currency (convert to uppercase)
+        # If currency = GBp, then price is in pence. Divide by 100 to get pounds.
+        try:
+            ticker = yf.Ticker(symbol)
+            info = ticker.get_info()
+
+            symbol_name = info.get("displayName", info.get("longName", "Unknown Name"))
+            # Replace "," with " " in the symbol name
+            symbol_name = symbol_name.replace(",", " ")
+            raw_currency = info.get("currency", "USD")  # Default to USD if not found
+            symbol_divisor = 100 if raw_currency == "GBp" else 1  # Convert GBp to GBP by dividing by 100
+            symbol_currency = raw_currency.upper()  # Ensure symbol is uppercase
+
+        except (KeyError, AttributeError, TypeError) as e:
+            utility_funcs.log_message(f"Exception reported when fetching info for symbol {symbol}: {e}", "error")
+
         symbol_data_frame = data[symbol].reset_index()  # Reset index to get 'Date' as column
 
         try:    # Try and extract the data
             for _, row in symbol_data_frame.iterrows():
                 record = {
-                    "Date": row["Date"].strftime("%Y-%m-%d"),
                     "Symbol": symbol,
-                    "Open": float(row["Open"]) if not pd.isna(row["Open"]) else 0.0,
-                    "High": float(row["High"]) if not pd.isna(row["High"]) else 0.0,
-                    "Low": float(row["Low"]) if not pd.isna(row["Low"]) else 0.0,
-                    "Close": float(row["Close"]) if not pd.isna(row["Close"]) else 0.0,
-                    "Volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0.0,
+                    "Date": row["Date"].strftime("%Y-%m-%d"),
+                    "Name": symbol_name,
+                    "Currency": symbol_currency,
+                    "Price": float(row["Close"]) / symbol_divisor if not pd.isna(row["Close"]) else 0.0,
+                    # "Open": float(row["Open"]) / symbol_divisor if not pd.isna(row["Open"]) else 0.0,
+                    # "High": float(row["High"]) / symbol_divisor if not pd.isna(row["High"]) else 0.0,
+                    # "Low": float(row["Low"]) / symbol_divisor if not pd.isna(row["Low"]) else 0.0,
+                    # "Volume": int(row["Volume"]) if not pd.isna(row["Volume"]) else 0.0,
                 }
                 # Append each record to the stock_records list
-                if record["Open"] != 0.0 or record["High"] != 0.0 or record["Low"] != 0.0 or record["Close"] != 0.0 or record["Volume"] != 0:
+                if record["Price"] != 0:
                     stock_records.append(record)
 
-        except Exception as e:  # noqa: BLE001
+        except (KeyError, ValueError, TypeError) as e: 
             utility_funcs.log_message(f"Exception reported when extracting data for symbol {symbol}: {e}", "error")
             error_count += 1
             continue
@@ -168,7 +193,7 @@ def save_to_csv(stock_data):
     file_path = utility_funcs.config_manager.select_file_location(csv_file_name)
 
     # Write the data to a CSV file
-    header = ["Date", "Symbol", "Open", "High", "Low", "Close", "Volume"]
+    header = ["Symbol", "Date", "Name", "Currency", "Price"]
 
     with Path(file_path).open("w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)

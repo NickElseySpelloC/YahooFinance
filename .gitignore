@@ -19,5 +19,5 @@ venv/
 # App 
 YahooFinanceConfig.yaml
 YahooFinance.code-workspace
-yahoo_prices.csv
 YahooFinance.log
+price_data.csv

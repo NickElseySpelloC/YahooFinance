@@ -13,7 +13,7 @@ Yahoo:
   Interval: 1d
 
 Files:
-  OutputCSV: yahoo_prices.csv
+  OutputCSV: price_data.csv
   MonitoringLogFile: YahooFinance.log
   MonitoringLogFileMaxLines: 200
   # How much information do we write to the log file. One of: none; error; warning; summary; detailed; debug; all

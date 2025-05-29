@@ -34,7 +34,7 @@ Yahoo:
     Interval: 1d
 
 Files:
-    OutputCSV: yahoo_prices.csv
+    OutputCSV: price_data.csv
     MonitoringLogFile: YahooFinance.log
     MonitoringLogFileMaxLines: 200
     LogFileVerbosity: detailed
