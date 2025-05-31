@@ -9,5 +9,5 @@ dependencies = [
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
     "yfinance>=0.2.61",
-    "sc-utility>=1.0.1",    
+    "sc-utility>=1.0.2",    
 ]

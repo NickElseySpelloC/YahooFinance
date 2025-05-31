@@ -14,7 +14,7 @@ Yahoo:
 
 Files:
   OutputCSV: price_data.csv
-  LogfileName: YahooFinance.log
+  LogfileName: logfile.log
   LogfileMaxLines: 200
   # How much information do we write to the log file. One of: none; error; warning; summary; detailed; debug; all
   LogfileVerbosity: detailed

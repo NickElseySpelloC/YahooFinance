@@ -23,7 +23,7 @@ Windows: `pip install uv`
 The shell script used to run the app (*YahooFinance.sh*) is uses the *uv sync* command to ensure that all the prerequitie Python packages are installed in the virtual environment.
 
 # Configuration File 
-The script uses the *YahooFinanceConfig.yaml* YAML file for configuration. An example of included with the project (*YahooFinanceConfig.yaml.example*). Copy this to *YahooFinanceConfig.yaml* before running the app for the first time.  Here's an example config file:
+The script uses the *config.yaml* YAML file for configuration. An example of included with the project (*config.yaml.example*). Copy this to *config.yaml* before running the app for the first time.  Here's an example config file:
 ```
 Yahoo:
     Symbols:
@@ -35,7 +35,7 @@ Yahoo:
 
 Files:
     OutputCSV: price_data.csv
-    MonitoringLogFile: YahooFinance.log
+    MonitoringLogFile: logfile.log
     MonitoringLogFileMaxLines: 200
     LogFileVerbosity: detailed
     ConsoleVerbosity: detailed

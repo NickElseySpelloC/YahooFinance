@@ -20,7 +20,7 @@ wheels/
 
 
 # App 
-YahooFinanceConfig.yaml
 YahooFinance.code-workspace
-YahooFinance.log
 price_data.csv
+config.yaml
+logfile.log

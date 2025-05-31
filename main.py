@@ -1,7 +1,6 @@
 """Uses the yfinance library to fetch and display the historical stock prices of the specified stocks and write the data to a CSV file."""
 import csv
 import sys
-from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
@@ -10,7 +9,7 @@ from sc_utility import SCConfigManager, SCLogger
 
 from config_schemas import ConfigSchema
 
-CONFIG_FILE = "YahooFinanceConfig.yaml"
+CONFIG_FILE = "config.yaml"
 
 def get_yf_errors(logger, log_errors=True):  # noqa: FBT002
     """Get the errors from yfinance shared module. Returns a list of error dict objects."""
@@ -185,15 +184,13 @@ def extract_stock_data(logger, data, symbols, error_list):
 
 def save_to_csv(config, stock_data):
     """Save the extracted fund stock_data to a CSV file."""
-    csv_file_name = config.get("Files", "OutputCSV")
-    file_path = Path.cwd() / csv_file_name
-    if not file_path.exists():
-        file_path = Path(__file__).resolve().parent / csv_file_name
+    csvfile = config.get("Files", "OutputCSV")
+    file_path = config.select_file_location(csvfile)
 
     # Write the data to a CSV file
     header = ["Symbol", "Date", "Name", "Currency", "Price"]
 
-    with Path(file_path).open("w", newline="", encoding="utf-8") as csvfile:
+    with file_path.open("w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
 
         # Write header
