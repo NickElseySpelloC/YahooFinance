@@ -1,22 +1,18 @@
 """Uses the yfinance library to fetch and display the historical stock prices of the specified stocks and write the data to a CSV file."""
 import csv
-import json
 import sys
 from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
 import yfinance.shared as yfshared
+from sc_utility import SCConfigManager, SCLogger
 
-from utility import ConfigManager, UtilityFunctions
+from config_schemas import ConfigSchema
 
-# Create an instance of ConfigManager
-system_config = ConfigManager()
+CONFIG_FILE = "YahooFinanceConfig.yaml"
 
-# Create an instance of the PowerControllerState
-utility_funcs = UtilityFunctions(system_config)
-
-def get_yf_errors(log_errors=True):  # noqa: FBT002
+def get_yf_errors(logger, log_errors=True):  # noqa: FBT002
     """Get the errors from yfinance shared module. Returns a list of error dict objects."""
     # Extract errors from yfshared._ERRORS.items()
     yf_error_list = yfshared._ERRORS.items()  # noqa: SLF001
@@ -35,17 +31,17 @@ def get_yf_errors(log_errors=True):  # noqa: FBT002
 
     if log_errors:
         for error in error_list:
-            utility_funcs.log_message(f"Symbol: {error['Symbol']}, Error: {error['Error']}", "warning")
+            logger.log_message(f"Symbol: {error['Symbol']}, Error: {error['Error']}", "warning")
 
     return error_list
 
-def get_stock_data(symbols):
+def get_stock_data(config, logger, symbols):
     """Fetch historical stock data for the given symbols using yfinance. Returns a DataFrame and error list."""
     # Define parameters
-    yf_period = utility_funcs.config["Yahoo"]["Period"]
-    yf_interval = utility_funcs.config["Yahoo"]["Interval"]
+    yf_period = config.get("Yahoo", "Period")
+    yf_interval = config.get("Yahoo", "Interval")
 
-    utility_funcs.log_message(f"Fetching data for symbols: {symbols}", "debug")
+    logger.log_message(f"Fetching data for symbols: {symbols}", "debug")
     # Fetch data from Yahoo Finance
     try:
         # Download data
@@ -60,11 +56,11 @@ def get_stock_data(symbols):
 
         # Check if the data is empty
         if data.empty:
-            utility_funcs.report_fatal_error("No data returned. Check if the parameters (e.g., period, interval) are valid.")
-            get_yf_errors()
+            logger.log_fatal_error("No data returned. Check if the parameters (e.g., period, interval) are valid.")
+            get_yf_errors(logger)
             return None, 0
 
-        if utility_funcs.config["Files"]["LogFileVerbosity"] == "all":
+        if config.get("Files", "LogFileVerbosity") == "all":
             # Print the entire DataFrame for debugging purposes
             stock_data = {}
             for symbol in symbols:
@@ -81,37 +77,37 @@ def get_stock_data(symbols):
             if symbol in data.columns.get_level_values(0):
                 required_columns = {"Open", "High", "Low", "Close", "Volume"}
                 if not required_columns.issubset(data[symbol].columns):
-                    utility_funcs.report_fatal_error(f"Missing expected columns for symbol {symbol}. Data might be incomplete.")
-                    get_yf_errors()
+                    logger.log_fatal_error(f"Missing expected columns for symbol {symbol}. Data might be incomplete.")
+                    get_yf_errors(logger)
                     return None, 0
             else:
-                utility_funcs.report_fatal_error(f"Symbol {symbol} not found in the returned data.")
-                get_yf_errors()
+                logger.log_fatal_error(f"Symbol {symbol} not found in the returned data.")
+                get_yf_errors(logger)
                 return None, 0
 
         # Now see if there are any Yahoo errors from the download call
-        error_list = get_yf_errors()
+        error_list = get_yf_errors(logger)
 
         # Look for any global errors
         # Look at the error_list list and see if any of the Error values start with 'YFRateLimitError'
         if any(error["Error"].startswith("YFRateLimitError") for error in error_list):
-            utility_funcs.report_fatal_error("Yahoo Finance rate limit error. Please try again later.")
+            logger.log_fatal_error("Yahoo Finance rate limit error. Please try again later.")
             return None, 0
 
         if any(error["Error"].contains("Invalid input - interval") for error in error_list):
-            utility_funcs.report_fatal_error(f"Yahoo Finance API called with invalid interval: {yf_interval}.")
+            logger.log_fatal_error(f"Yahoo Finance API called with invalid interval: {yf_interval}.")
             return None, 0
 
         if any(error["Error"].contains("YFInvalidPeriodError") for error in error_list):
-            utility_funcs.report_fatal_error(f"Yahoo Finance API called with invalid period: {yf_period}.")
+            logger.log_fatal_error(f"Yahoo Finance API called with invalid period: {yf_period}.")
             return None, 0
 
     except Exception as e:  # noqa: BLE001
-        utility_funcs.report_fatal_error(f"Exception caught when fetching data from Yahoo Finance: {e}", exit_program=True)
+        logger.log_fatal_error(f"Exception caught when fetching data from Yahoo Finance: {e}", exit_program=True)
 
     return data, error_list
 
-def extract_stock_data(data, symbols, error_list):
+def extract_stock_data(logger, data, symbols, error_list):
     """
     Extract stock data from the downloaded data and format it into a list of dictionaries.
 
@@ -120,7 +116,7 @@ def extract_stock_data(data, symbols, error_list):
     :param error_list: List of errors encountered during the download process.
     :return: List of dictionaries containing the extracted stock data and error count.
     """
-    utility_funcs.log_message(f"Extracting stock data for symbols: {symbols}", "debug")
+    logger.log_message(f"Extracting stock data for symbols: {symbols}", "debug")
 
     # Output list of dicts
     stock_records = []
@@ -134,7 +130,7 @@ def extract_stock_data(data, symbols, error_list):
 
         # Check if the symbol is in the error list
         if any(error["Symbol"] == symbol for error in error_list):
-            utility_funcs.log_message(f"Skipping symbol {symbol} due to previous error reported during download", "debug")
+            logger.log_message(f"Skipping symbol {symbol} due to previous error reported during download", "debug")
             continue
 
         if symbol not in data.columns.get_level_values(0):
@@ -156,7 +152,7 @@ def extract_stock_data(data, symbols, error_list):
             symbol_currency = raw_currency.upper()  # Ensure symbol is uppercase
 
         except (KeyError, AttributeError, TypeError) as e:
-            utility_funcs.log_message(f"Exception reported when fetching info for symbol {symbol}: {e}", "error")
+            logger.log_message(f"Exception reported when fetching info for symbol {symbol}: {e}", "error")
 
         symbol_data_frame = data[symbol].reset_index()  # Reset index to get 'Date' as column
 
@@ -177,8 +173,8 @@ def extract_stock_data(data, symbols, error_list):
                 if record["Price"] != 0:
                     stock_records.append(record)
 
-        except (KeyError, ValueError, TypeError) as e: 
-            utility_funcs.log_message(f"Exception reported when extracting data for symbol {symbol}: {e}", "error")
+        except (KeyError, ValueError, TypeError) as e:
+            logger.log_message(f"Exception reported when extracting data for symbol {symbol}: {e}", "error")
             error_count += 1
             continue
 
@@ -187,10 +183,12 @@ def extract_stock_data(data, symbols, error_list):
 
     return stock_records, error_count
 
-def save_to_csv(stock_data):
+def save_to_csv(config, stock_data):
     """Save the extracted fund stock_data to a CSV file."""
-    csv_file_name = utility_funcs.config["Files"]["OutputCSV"]
-    file_path = utility_funcs.config_manager.select_file_location(csv_file_name)
+    csv_file_name = config.get("Files", "OutputCSV")
+    file_path = Path.cwd() / csv_file_name
+    if not file_path.exists():
+        file_path = Path(__file__).resolve().parent / csv_file_name
 
     # Write the data to a CSV file
     header = ["Symbol", "Date", "Name", "Currency", "Price"]
@@ -207,13 +205,40 @@ def save_to_csv(stock_data):
 
     return True
 
-def main_module():
+def main():
     """Main function to run the script."""
+    # Get our default schema, validation schema, and placeholders
+    schemas = ConfigSchema()
+
+    # Initialize the SCConfigManager class
     try:
-        yf_symbols = utility_funcs.config["Yahoo"]["Symbols"]
+        config = SCConfigManager(
+            config_file=CONFIG_FILE,
+            default_config=schemas.default,  # Replace with your default config if needed
+            validation_schema=schemas.validation,  # Replace with your validation schema if needed
+            placeholders=schemas.placeholders  # Replace with your placeholders if needed
+        )
+    except RuntimeError as e:
+        print(f"Configuration file error: {e}", file=sys.stderr)
+        return
+
+    # Initialize the SCLogger class
+    try:
+        logger = SCLogger(config.get_logger_settings())
+    except RuntimeError as e:
+        print(f"Logger initialisation error: {e}", file=sys.stderr)
+        return
+
+    logger.log_message("Starting Yahoo Finance Downloader utility" , "summary")
+
+    # Setup email
+    logger.register_email_settings(config.get_email_settings())
+
+    try:
+        yf_symbols = config.get("Yahoo", "Symbols")
 
         # Download the stock data using yfinance
-        yf_data, yf_errors = get_stock_data(yf_symbols)
+        yf_data, yf_errors = get_stock_data(config, logger, yf_symbols)
 
         # Extract the price data into a list of dictionaries
         extract_error_count = 0
@@ -221,13 +246,13 @@ def main_module():
             sys.exit(1)     # Exit if there was an error downloading the data. Error already reported.
         else:
             # Extract the stock data
-            stock_prices, extract_error_count = extract_stock_data(yf_data, yf_symbols, yf_errors)
+            stock_prices, extract_error_count = extract_stock_data(logger, yf_data, yf_symbols, yf_errors)
 
             # Save the data to a CSV file
             if stock_prices is None:
                 sys.exit(1)     # Exit if there was an error extracting the data. Error already reported.
             else:
-                save_to_csv(stock_prices)
+                save_to_csv(config, stock_prices)
 
             # Send email if we had any download or extract errors
             error_message = None
@@ -243,32 +268,30 @@ def main_module():
 
             if error_message is not None:
                 # Only send the email if we have not already sent one for this run
-                if not utility_funcs.fatal_error_tracking("get"):
-                    utility_funcs.log_message("Stock errors reporting - sending notification email.", "detailed")
-                    utility_funcs.send_email("Problems with Yahoo stock download", error_message)
+                if not logger.get_fatal_error():
+                    logger.log_message("Stock errors reporting - sending notification email.", "detailed")
+                    logger.send_email("Problems with Yahoo stock download", error_message)
 
                 # Record the error in the fatal error tracking so that we don't send multiple emails
-                utility_funcs.fatal_error_tracking("set", error_message)
+                logger.set_fatal_error(error_message)
                 sys.exit(1)
 
     # Catch any unexpected exceptions
     except Exception as e:  # noqa: BLE001
-        utility_funcs.report_fatal_error(f"An unexpected error occurred while writing: {e}")
+        logger.log_fatal_error(f"An unexpected error occurred while writing: {e}")
         sys.exit(1)
 
-    utility_funcs.log_message("Data extracted and saved to file successfully.", "summary")
+    logger.log_message("Data extracted and saved to file successfully.", "summary")
 
     # If the prior run fails, send email that this run worked OK
-    if utility_funcs.fatal_error_tracking("get"):
-        utility_funcs.log_message("Run was successful after a prior failure.", "summary")
-        utility_funcs.send_email("Run recovery", "Yahoo Finance Downloaded run was successful after a prior failure.")
-        utility_funcs.fatal_error_tracking("set")
+    if logger.get_fatal_error():
+        logger.log_message("Run was successful after a prior failure.", "summary")
+        logger.send_email("Run recovery", "Yahoo Finance Downloaded run was successful after a prior failure.")
+        logger.clear_fatal_error()
 
 if __name__ == "__main__":
-    utility_funcs.log_message("Starting Yahoo Finance Downloader utility" , "summary")
-
     # Run the main module
-    main_module()
+    main()
 
     sys.exit(0)
 # End of script
