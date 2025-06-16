@@ -102,7 +102,7 @@ def get_stock_data(config, logger, symbols):
             return None, 0
 
     except Exception as e:  # noqa: BLE001
-        logger.log_fatal_error(f"Exception caught when fetching data from Yahoo Finance: {e}", exit_program=True)
+        logger.log_fatal_error(f"Exception caught when fetching data from Yahoo Finance: {e}")
 
     return data, error_list
 

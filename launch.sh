@@ -1,8 +1,8 @@
 #!/bin/bash
 : '=======================================================
-Yahoo Finance 
+Application Launcher
 
-Downloads prices from Yahoo Finance and saves them in a CSV file.
+Requires Python and UV to be installed
 =========================================================='
 
 #User parameters
