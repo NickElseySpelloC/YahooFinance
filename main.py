@@ -1,18 +1,27 @@
 """Uses the yfinance library to fetch and display the historical stock prices of the specified stocks and write the data to a CSV file."""
-import csv
+import operator
 import sys
 
 import pandas as pd
 import yfinance as yf
 import yfinance.shared as yfshared
-from sc_utility import SCConfigManager, SCLogger
+from sc_utility import CSVReader, SCConfigManager, SCLogger
 
 from config_schemas import ConfigSchema
 
 CONFIG_FILE = "config.yaml"
 
-def get_yf_errors(logger, log_errors=True):  # noqa: FBT002
-    """Get the errors from yfinance shared module. Returns a list of error dict objects."""
+
+def get_yf_errors(logger, log_errors=True) -> list[dict] | None:  # noqa: FBT002
+    """Get the errors from yfinance shared module.
+
+    Args:
+        logger (SCLogger): Logger instance to log messages.
+        log_errors (bool): Whether to log the errors or not. Defaults to True.
+
+    Returns:
+        list[dict]: A list of error dict objects containing 'Symbol' and 'Error' keys.
+    """
     # Extract errors from yfshared._ERRORS.items()
     yf_error_list = yfshared._ERRORS.items()  # noqa: SLF001
 
@@ -34,8 +43,18 @@ def get_yf_errors(logger, log_errors=True):  # noqa: FBT002
 
     return error_list
 
+
 def get_stock_data(config, logger, symbols):
-    """Fetch historical stock data for the given symbols using yfinance. Returns a DataFrame and error list."""
+    """Fetch historical stock data for the given symbols using yfinance.
+
+    Args:
+        config (SCConfigManager): Configuration manager instance.
+        logger (SCLogger): Logger instance to log messages.
+        symbols (list[str]): List of stock symbols to fetch data for.
+
+    Returns:
+        tuple: A tuple containing the DataFrame with stock data and a list of errors.
+    """
     # Define parameters
     yf_period = config.get("Yahoo", "Period")
     yf_interval = config.get("Yahoo", "Interval")
@@ -54,7 +73,7 @@ def get_stock_data(config, logger, symbols):
         )
 
         # Check if the data is empty
-        if data.empty:
+        if data is None or data.empty:
             logger.log_fatal_error("No data returned. Check if the parameters (e.g., period, interval) are valid.")
             get_yf_errors(logger)
             return None, 0
@@ -89,31 +108,37 @@ def get_stock_data(config, logger, symbols):
 
         # Look for any global errors
         # Look at the error_list list and see if any of the Error values start with 'YFRateLimitError'
-        if any(error["Error"].startswith("YFRateLimitError") for error in error_list):
-            logger.log_fatal_error("Yahoo Finance rate limit error. Please try again later.")
-            return None, 0
+        if error_list is not None:
+            if any(error["Error"].startswith("YFRateLimitError") for error in error_list):
+                logger.log_fatal_error("Yahoo Finance rate limit error. Please try again later.")
+                return None, 0
 
-        if any(error["Error"].contains("Invalid input - interval") for error in error_list):
-            logger.log_fatal_error(f"Yahoo Finance API called with invalid interval: {yf_interval}.")
-            return None, 0
+            if any(error["Error"].contains("Invalid input - interval") for error in error_list):
+                logger.log_fatal_error(f"Yahoo Finance API called with invalid interval: {yf_interval}.")
+                return None, 0
 
-        if any(error["Error"].contains("YFInvalidPeriodError") for error in error_list):
-            logger.log_fatal_error(f"Yahoo Finance API called with invalid period: {yf_period}.")
-            return None, 0
+            if any(error["Error"].contains("YFInvalidPeriodError") for error in error_list):
+                logger.log_fatal_error(f"Yahoo Finance API called with invalid period: {yf_period}.")
+                return None, 0
 
     except Exception as e:  # noqa: BLE001
         logger.log_fatal_error(f"Exception caught when fetching data from Yahoo Finance: {e}")
 
     return data, error_list
 
+
 def extract_stock_data(logger, data, symbols, error_list):
     """
     Extract stock data from the downloaded data and format it into a list of dictionaries.
 
-    :param data: DataFrame containing the downloaded stock data.
-    :param symbols: List of stock symbols to extract data for.
-    :param error_list: List of errors encountered during the download process.
-    :return: List of dictionaries containing the extracted stock data and error count.
+    Args:
+        logger (SCLogger): Logger instance to log messages.
+        data (DataFrame): DataFrame containing the downloaded stock data.
+        symbols (list[str]): List of stock symbols to extract data for.
+        error_list (list[dict]): List of errors encountered during the download process.
+
+    Returns:
+        tuple: A tuple containing a list of dictionaries with extracted stock data and an error count.
     """
     logger.log_message(f"Extracting stock data for symbols: {symbols}", "debug")
 
@@ -178,29 +203,35 @@ def extract_stock_data(logger, data, symbols, error_list):
             continue
 
     # Sort the stock_records by ascending date then symbol
-    stock_records.sort(key=lambda x: (x["Date"], x["Symbol"]))
+    stock_records.sort(key=operator.itemgetter("Date", "Symbol"))
 
     return stock_records, error_count
 
-def save_to_csv(config, stock_data):
-    """Save the extracted fund stock_data to a CSV file."""
-    csvfile = config.get("Files", "OutputCSV")
-    file_path = config.select_file_location(csvfile)
 
-    # Write the data to a CSV file
-    header = ["Symbol", "Date", "Name", "Currency", "Price"]
+def save_to_csv(stock_data, config, logger, header_config) -> bool:
+    """Save the extracted fund stock_data to a CSV file. If the file exists, it will be replaced.
 
-    with file_path.open("w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
+    Args:
+        stock_data (list[dict]): List of dictionaries containing stock data.
+        config (SCConfigManager): Configuration manager instance.
+        logger (SCLogger): Logger instance to log messages.
+        header_config (list[dict]): Configuration for the CSV header.
 
-        # Write header
-        writer.writerow(header)
+    Returns:
+        bool: True if the data was saved successfully, False otherwise.
+    """
+    csv_path = config.select_file_location(config.get("Files", "OutputCSV", default="price_data.csv"))
 
-        # Write today's new rows
-        for row in stock_data:
-            writer.writerow(row.values())
+    # Create an instance of the CSVReader class and write the new file
+    try:
+        csv_reader = CSVReader(csv_path, header_config)
+        csv_reader.sort_csv_data(stock_data)
+        csv_reader.write_csv(stock_data)
+    except (ImportError, TypeError, ValueError, RuntimeError) as e:
+        logger.log_fatal_error(f"Failed to write CSV file: {e}")
 
     return True
+
 
 def main():
     """Main function to run the script."""
@@ -226,7 +257,7 @@ def main():
         print(f"Logger initialisation error: {e}", file=sys.stderr)
         return
 
-    logger.log_message("Starting Yahoo Finance Downloader utility" , "summary")
+    logger.log_message("Starting Yahoo Finance Downloader utility", "summary")
 
     # Setup email
     logger.register_email_settings(config.get_email_settings())
@@ -249,7 +280,7 @@ def main():
             if stock_prices is None:
                 sys.exit(1)     # Exit if there was an error extracting the data. Error already reported.
             else:
-                save_to_csv(config, stock_prices)
+                save_to_csv(stock_prices, config, logger, schemas.csv_header_config)
 
             # Send email if we had any download or extract errors
             error_message = None
@@ -285,6 +316,7 @@ def main():
         logger.log_message("Run was successful after a prior failure.", "summary")
         logger.send_email("Run recovery", "Yahoo Finance Downloaded run was successful after a prior failure.")
         logger.clear_fatal_error()
+
 
 if __name__ == "__main__":
     # Run the main module
