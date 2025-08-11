@@ -17,10 +17,13 @@ build/
 dist/
 venv/
 wheels/
-
+uv.lock
+*.code-workspace
 
 # App 
-YahooFinance.code-workspace
-price_data.csv
-config.yaml
-logfile.log
+archive/
+/*.csv
+/*.log
+/*.json
+/*.txt
+/*.yaml

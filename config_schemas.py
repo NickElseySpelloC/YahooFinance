@@ -116,4 +116,3 @@ class ConfigSchema:
                 "format": ".2f",
             },
         ]
-

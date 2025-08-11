@@ -15,10 +15,8 @@ Please also see the companion [InvestSmartExport](https://github.com/NickElseySp
 ## Prerequisites
 * Python 3.x installed:
 macOS: `brew install python3`
-Windows: `winget install python3 --source winget --scope machine`
 * UV for Python installed:
 macOS: 'brew install uvicorn'
-Windows: `pip install uv`
 
 The shell script used to run the app (*launch.sh*) is uses the *uv sync* command to ensure that all the prerequitie Python packages are installed in the virtual environment.
 
@@ -81,13 +79,8 @@ Email:
 | SubjectPrefix | Optional. If set, the app will add this text to the start of any email subject line for emails it sends. |
 
 # Running the Script
-Run the app using the relavant shell script for your operating system:
 
-## macOS / Linux
 `launch.sh`
-
-## Windows 
-`powershell -ExecutionPolicy ByPass -c  .\launch.ps1`
 
 # Troubleshooting
 ## "No module named xxx"
