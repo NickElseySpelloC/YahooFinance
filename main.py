@@ -5,7 +5,7 @@ import sys
 import pandas as pd
 import yfinance as yf
 import yfinance.shared as yfshared
-from sc_utility import CSVReader, SCConfigManager, SCLogger
+from sc_utility import CSVReader, SCCommon, SCConfigManager, SCLogger
 
 from config_schemas import ConfigSchema
 
@@ -220,7 +220,8 @@ def save_to_csv(stock_data, config, logger, header_config) -> bool:
     Returns:
         bool: True if the data was saved successfully, False otherwise.
     """
-    csv_path = config.select_file_location(config.get("Files", "OutputCSV", default="price_data.csv"))
+    csv_path = SCCommon.select_file_location(config.get("Files", "OutputCSV", default="price_data.csv"))
+    assert csv_path is not None, "CSV path cannot be None"
 
     # Create an instance of the CSVReader class and write the new file
     try:
