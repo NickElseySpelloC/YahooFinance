@@ -5,14 +5,14 @@ import sys
 import pandas as pd
 import yfinance as yf
 import yfinance.shared as yfshared
-from sc_utility import CSVReader, SCCommon, SCConfigManager, SCLogger
+from sc_foundation import CSVReader, SCCommon, SCConfigManager, SCLogger
 
 from config_schemas import ConfigSchema
 
 CONFIG_FILE = "config.yaml"
 
 
-def get_yf_errors(logger, log_errors=True) -> list[dict] | None:  # noqa: FBT002
+def get_yf_errors(logger, log_errors=True) -> list[dict] | None:
     """Get the errors from yfinance shared module.
 
     Args:

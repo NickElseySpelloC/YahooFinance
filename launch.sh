@@ -3,16 +3,58 @@
 Application Launcher
 
 Requires Python and UV to be installed
+
+3/4/2026: Change default directory to the script location, and allow --homedir to override it.
 =========================================================='
 
-set -euo pipefail
+# set -euo pipefail
 
-# --- config ---
-ScriptName="main.py"
+PYPROJECT="pyproject.toml"
 
-# Resolve script dir and cd there
-HomeDir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-cd "$HomeDir"
+# Parse --homedir argument from any position, default to this script's directory
+HomeDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+for ((i=1; i<=$#; i++)); do
+  if [ "${!i}" = "--homedir" ]; then
+    j=$((i+1))
+    if [ $j -le $# ]; then
+      HomeDir="${!j}"
+      break
+    fi
+  fi
+done
+
+# make sure HomeDir is an absolute path
+HomeDir="$(cd "$HomeDir" && pwd)"
+
+# Change to the home directory so uv commands work correctly
+cd "$HomeDir" || {
+  echo "[launcher] Error: Cannot change to directory $HomeDir" >&2
+  exit 1
+}
+
+# Load environment variables from .env if present (in HomeDir)
+# Note: this "sources" the file, so it should contain simple KEY=VALUE lines.
+EnvFile=".env"
+if [ -f "$EnvFile" ]; then
+  echo "[launcher] Loading environment from $HomeDir/$EnvFile ..."
+  set -a
+  # shellcheck disable=SC1090
+  . "$EnvFile"
+  set +a
+fi
+
+# Get the script name from pyproject.toml
+if [ -f "$PYPROJECT" ]; then
+  ScriptName=$(grep -E '^launch_path *= *"' "$PYPROJECT" | head -1 | sed -E 's/^launch_path *= *"([^"]+)".*$/\1/')
+else
+  echo "Error: $PYPROJECT not found."
+  exit 1
+fi
+
+if [ -z "$ScriptName" ]; then
+  echo "Error: launch_path not defined in $PYPROJECT."
+  exit 1
+fi
 
 # Find uv reliably (systemd often has a minimal PATH)
 if command -v uv >/dev/null 2>&1; then
@@ -45,8 +87,8 @@ term_handler() {
 }
 trap term_handler SIGINT SIGTERM
 
-echo "[launcher] Starting app with uv run $ScriptName ..."
-"$UVCmd" run "$ScriptName"
+echo "[launcher] Starting app with uv run $ScriptName from directory $HomeDir ..."
+"$UVCmd" run "$ScriptName" "$@"
 app_rc=$?
 
 if [ $app_rc -eq 0 ]; then
