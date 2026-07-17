@@ -1,6 +1,6 @@
 [project]
 name = "YahooFinance"
-version = "1.1.0"
+version = "1.1.1"
 description = "A simply wrapper around the yfinance libraries, making  it easy to download selected Yahoo symbols for a selected time period."
 readme = "README.md"
 requires-python = ">=3.13"

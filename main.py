@@ -78,7 +78,7 @@ def get_stock_data(config, logger, symbols):
             get_yf_errors(logger)
             return None, 0
 
-        if config.get("Files", "LogFileVerbosity") == "all":
+        if config.get("Files", "LogfileVerbosity") == "all":
             # Print the entire DataFrame for debugging purposes
             stock_data = {}
             for symbol in symbols:
