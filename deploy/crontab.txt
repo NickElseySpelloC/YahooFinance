@@ -1,0 +1,1 @@
+0 5 * * * /Users/nick/scripts/YahooFinance/scripts/launch.sh >/Users/nick/scripts/YahooFinance/logs/crontab.log 2>&1

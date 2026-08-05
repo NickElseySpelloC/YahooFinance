@@ -1,0 +1,86 @@
+# Config file for the Yahho Finance dowmnloader utility
+Yahoo:
+  # A list of stock symbols to download data for
+  # You can use any of the symbols listed on Yahoo Finance
+  # https://finance.yahoo.com/lookup/
+  Symbols:
+    - ^AXJO
+    - ^GSPC
+    - AGVT.AX
+    - ARG.AX
+    - AUD=X
+    - AUDEUR=X
+    - AUDGBP=X
+    - AUDUSD=X
+    - BILL.AX
+    - BND
+    - BRK-B
+    - CRED.AX
+    - DJRE.AX
+    - EURAUD=X
+    - FASMX
+    - FBGRX
+    - FBSOX
+    - FPURX
+    - FSCSX
+    - FSEAX
+    - GBPAUD=X
+    - GOLD.AX
+    - HBRD.AX
+    - IAF.AX
+    - ICOR.AX
+    - IHEB.AX
+    - IHHY.AX
+    - ILB.AX
+    - IOZ.AX
+    - ISF.L
+    - ISO.AX
+    - IVV.AX
+    - IWB
+    - MXT.AX
+    - PLUS.AX
+    - QPON.AX
+    - RCAP.AX
+    - SLF.AX
+    - SOL.AX
+    - SPHD
+    - SPY.AX
+    - SSO.AX
+    - STIP
+    - STW.AX
+    - TACT.XA
+    - TOLZ
+    - UITB
+    - UKCO.L
+    - VACF.AX
+    - VAF.AX
+    - VAP.AX
+    - VAS.AX
+    - VBND.AX
+    - VFEM.L
+    - VGE.AX
+    - VGS.AX
+    - VHY.AX
+    - VIF.AX
+    - VISM.AX
+    - VOO
+    - VSS
+    - WMA.AX
+    - WXHG.AX
+  #Valid periods are 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+  Period: 3mo
+  # Valid intervals are 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 4h, 1d, 5d, 1wk, 1mo, 3mo
+  Interval: 1d
+
+Files:
+  OutputCSV: "/Users/nick/Library/CloudStorage/Dropbox/ProdFinance/SecurityPrices/yahoo_prices.csv"
+  LogfileName: logs/logfile.log
+  LogfileMaxLines: 2000
+  # How much information do we write to the log file. One of: none; error; warning; summary; detailed; debug; all
+  LogfileVerbosity: detailed
+  # How much information do we write to the console. One of: error; warning; summary; detailed; debug; all
+  ConsoleVerbosity: detailed
+  
+Email:
+  EnableEmail: True
+  SubjectPrefix: "[Prod Yahoo Finance]: "  

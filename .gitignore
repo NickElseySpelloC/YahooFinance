@@ -4,7 +4,6 @@ __pycache__/
 .python-version
 .ruff_cache/
 .venv/
-.vscode/
 *.egg
 *.egg-info
 *.py[oc]
@@ -20,13 +19,6 @@ wheels/
 .cache_ggshield
 
 # App 
-/*.txt
-/*.json
-/*.csv
-/*.log
-config.yaml
 logs/
-archive/
-src/*.json
-src/*.csv
-src/*.log
+data/*.csv
+.env.target

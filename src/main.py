@@ -1,4 +1,5 @@
 """Uses the yfinance library to fetch and display the historical stock prices of the specified stocks and write the data to a CSV file."""
+import argparse
 import operator
 import sys
 
@@ -10,6 +11,22 @@ from sc_foundation import CSVReader, SCCommon, SCConfigManager, SCLogger
 from config_schemas import ConfigSchema
 
 CONFIG_FILE = "config.yaml"
+
+
+def parse_command_line_args() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description="Fetch and save historical stock prices from Yahoo Finance.")
+    parser.add_argument(
+        "--config",
+        default=CONFIG_FILE,
+        metavar="FILE",
+        help=f"Path to the YAML config file (default: {CONFIG_FILE})",
+    )
+    return parser.parse_args()
 
 
 def get_yf_errors(logger, log_errors=True) -> list[dict] | None:
@@ -236,13 +253,15 @@ def save_to_csv(stock_data, config, logger, header_config) -> bool:
 
 def main():
     """Main function to run the script."""
+    args = parse_command_line_args()
+
     # Get our default schema, validation schema, and placeholders
     schemas = ConfigSchema()
 
     # Initialize the SCConfigManager class
     try:
         config = SCConfigManager(
-            config_file=CONFIG_FILE,
+            config_file=args.config,
             default_config=schemas.default,  # Replace with your default config if needed
             validation_schema=schemas.validation,  # Replace with your validation schema if needed
             placeholders=schemas.placeholders  # Replace with your placeholders if needed
