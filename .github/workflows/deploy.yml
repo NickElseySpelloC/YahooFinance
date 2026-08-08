@@ -22,12 +22,4 @@ jobs:
         environment: ${{ fromJSON(inputs.environment == 'both' && '["MacMiniIT","MacMiniAU"]' || format('["{0}"]', inputs.environment)) }}
     steps:
       - name: Pull latest from GitHub
-        run: git -C /home/nick/scripts/YahooFinance pull
-
-      - name: Restart service
-        run: sudo systemctl restart YahooFinance
-
-      - name: Verify service is running
-        run: |
-          sleep 6
-          systemctl is-active YahooFinance
+        run: git -C /Users/nick/scripts/YahooFinance pull
